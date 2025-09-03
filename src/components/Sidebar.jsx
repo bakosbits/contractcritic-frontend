@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import contractGuardLogo from '@/assets/runereview_logo.png'
+import contractGuardLogo from '@/assets/contractcritic_logo.png'
 
 const Sidebar = ({ user }) => {
   const location = useLocation()
@@ -39,7 +39,7 @@ const Sidebar = ({ user }) => {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">RuneReview</h1>
+            <h1 className="text-lg font-semibold">ContractCritic</h1>
             <p className="text-xs text-gray-400">AI Contract Review</p>
           </div>
         </div>

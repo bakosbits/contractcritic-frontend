@@ -1,1 +1,1 @@
-# runereview-frontend
+# contractcritic-frontend
