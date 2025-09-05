@@ -1,9 +1,8 @@
-import React from 'react'
+import React from "react";
 
 // Simple toaster component placeholder
 export function Toaster() {
-  return null
+    return null;
 }
 
-export default Toaster
-
+export default Toaster;

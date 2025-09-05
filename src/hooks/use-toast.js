@@ -1,30 +1,29 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 // Simple toast implementation
 export function useToast() {
-  const [toasts, setToasts] = useState([])
+    const [toasts, setToasts] = useState([]);
 
-  const toast = ({ title, description, variant = 'default' }) => {
-    const id = Math.random().toString(36).substr(2, 9)
-    const newToast = { id, title, description, variant }
-    
-    setToasts(prev => [...prev, newToast])
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id))
-    }, 5000)
-  }
+    const toast = ({ title, description, variant = "default" }) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        const newToast = { id, title, description, variant };
 
-  const dismiss = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+        setToasts((prev) => [...prev, newToast]);
 
-  return { toast, toasts, dismiss }
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 5000);
+    };
+
+    const dismiss = (id) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    };
+
+    return { toast, toasts, dismiss };
 }
 
 // Simple Toaster component
 export function Toaster() {
-  return null // For now, we'll use browser alerts or console logs
+    return null; // For now, we'll use browser alerts or console logs
 }
-
