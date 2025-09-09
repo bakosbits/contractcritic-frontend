@@ -8,21 +8,24 @@ import {
     Shield,
     User,
     X,
+    LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Sidebar = ({ user, onClose }) => {
     const isMobile = useIsMobile();
     const location = useLocation();
+    const { signOut } = useAuth();
 
     const navigation = [
         { name: "Dashboard", href: "/", icon: Home },
         { name: "Upload Contract", href: "/upload", icon: Upload },
         { name: "Contracts", href: "/contracts", icon: FileText },
         { name: "Analytics", href: "/analytics", icon: BarChart3 },
-        { name: "Settings", href: "/settings", icon: Settings },
+        { name: "Account", href: "/account", icon: Settings },
     ];
 
     const isActive = (href) => {
@@ -50,9 +53,6 @@ const Sidebar = ({ user, onClose }) => {
                         <h1 className="text-lg font-semibold">
                             Contract Critic
                         </h1>
-                        <p className="text-xs text-gray-400">
-                            AI Contract Review
-                        </p>
                     </div>
                 </div>
                 {/* Close button for mobile */}
@@ -112,14 +112,17 @@ const Sidebar = ({ user, onClose }) => {
                     </div>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-3 text-gray-300 hover:text-white hover:bg-gray-800"
-                >
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                </Button>
+                <div className="mt-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={signOut}
+                        className="w-full text-gray-300 hover:text-white hover:bg-red-800"
+                    >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                    </Button>
+                </div>
             </div>
         </div>
     );

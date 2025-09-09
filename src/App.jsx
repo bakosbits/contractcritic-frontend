@@ -13,19 +13,44 @@ import Dashboard from "@/components/Dashboard";
 import ContractUpload from "@/components/ContractUpload";
 import ContractList from "@/components/ContractList";
 import ContractAnalysis from "@/components/ContractAnalysis";
+import Account from "@/components/Account";
+import About from "@/components/About";
+import Contact from "@/components/Contact";
+import Privacy from "@/components/Privacy";
+import Terms from "@/components/Terms";
+import Legal from "@/components/Legal";
+import Footer from "@/components/Footer";
+import { Login } from "@/components/Auth/Login";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { API_BASE } from "./lib/config";
 import "./App.css";
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Login />;
+    }
+
+    return children;
+};
 
 // Main App component
 const AppContent = () => {
     const [contracts, setContracts] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [user] = useState({
-        id: 1,
-        name: "Rich Bakos",
-        email: "rich@bakos.me",
-    });
+    const { user, getAccessToken, signOut } = useAuth();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const isMobile = useIsMobile();
@@ -37,15 +62,38 @@ const AppContent = () => {
         }
     }, [isMobile]);
 
+    // Fetch contracts only on initial load when user is authenticated
+    useEffect(() => {
+        if (user && contracts.length === 0) {
+            fetchContracts();
+        }
+    }, [user]);
+
     const fetchContracts = async () => {
+        if (!user) return;
+
         try {
             setLoading(true);
-            const response = await fetch(
-                `${API_BASE}/contracts?user_id=${user.id}`,
-            );
+            const token = await getAccessToken();
+
+            const response = await fetch(`${API_BASE}/contracts`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
             if (response.ok) {
                 const data = await response.json();
                 setContracts(data.data.contracts || []);
+            } else if (response.status === 401) {
+                // Token expired or invalid, sign out
+                await signOut();
+            } else {
+                console.error(
+                    "Failed to fetch contracts:",
+                    response.statusText,
+                );
             }
         } catch (error) {
             console.error("Error fetching contracts:", error);
@@ -68,32 +116,30 @@ const AppContent = () => {
         );
     };
 
+    // Create user object for components that expect it
+    const userForComponents = user
+        ? {
+              id: user.id,
+              name:
+                  user.user_metadata?.full_name ||
+                  user.email?.split("@")[0] ||
+                  "User",
+              email: user.email,
+          }
+        : null;
+
+    if (!user) {
+        return <Login />;
+    }
+
     return (
-        <div className="h-screen bg-gray-50">
-            {/* Fixed Desktop Sidebar - Extends to top */}
+        <div className="min-h-screen bg-gray-200">
+            {/* Desktop Sidebar */}
             {!isMobile && (
                 <div className="fixed top-0 left-0 bottom-0 w-64 z-40">
-                    <Sidebar user={user} />
+                    <Sidebar user={userForComponents} />
                 </div>
             )}
-
-            {/* Fixed Header - Butts against sidebar */}
-            <header className={`fixed top-0 right-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-50 ${!isMobile ? 'left-64' : 'left-0'}`}>
-                {isMobile && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSidebarOpen(true)}
-                        className="p-2"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </Button>
-                )}
-                <h1 className="text-lg font-semibold text-gray-900">
-                    Contract Critic
-                </h1>
-                {isMobile && <div className="w-9" />} {/* Spacer for centering on mobile */}
-            </header>
 
             {/* Mobile Sidebar Overlay */}
             {isMobile && sidebarOpen && (
@@ -106,7 +152,7 @@ const AppContent = () => {
                     {/* Sidebar */}
                     <div className="fixed inset-y-0 left-0 z-50">
                         <Sidebar
-                            user={user}
+                            user={userForComponents}
                             onClose={() => setSidebarOpen(false)}
                         />
                     </div>
@@ -114,50 +160,96 @@ const AppContent = () => {
             )}
 
             {/* Main Content Area */}
-            <main 
+            <main
                 className={`
-                    fixed top-16 bottom-0 right-0 overflow-y-auto
-                    ${!isMobile ? 'left-64' : 'left-0'}
+                    min-h-screen
+                    ${!isMobile ? "ml-64 pt-8" : "pt-0"}
                 `}
             >
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <Dashboard
-                                contracts={contracts}
-                                loading={loading}
-                                user={user}
+                {/* Mobile Header/Menu Button */}
+                {isMobile && (
+                    <div className="flex items-center align-middle justify-between bg-gray-800 px-4 pt-2 pb-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSidebarOpen(true)}
+                            className="p-2 text-gray-100 hover:text-gray-300"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </Button>
+                        <h1 className="text-lg font-semibold text-gray-100">
+                            Contract Critic
+                        </h1>
+                        <div className="w-9" /> {/* Spacer for centering */}
+                    </div>
+                )}
+
+                <div className="flex flex-col min-h-full">
+                    <div className="flex-1">
+                        <Routes>
+                            <Route
+                                path="/"
+                                element={
+                                    <Dashboard
+                                        contracts={contracts}
+                                        loading={loading}
+                                        user={userForComponents}
+                                    />
+                                }
                             />
-                        }
-                    />
-                    <Route
-                        path="/upload"
-                        element={
-                            <ContractUpload
-                                onContractUploaded={handleContractUploaded}
+                            <Route
+                                path="/upload"
+                                element={
+                                    <ContractUpload
+                                        onContractUploaded={
+                                            handleContractUploaded
+                                        }
+                                    />
+                                }
                             />
-                        }
-                    />
-                    <Route
-                        path="/contracts"
-                        element={
-                            <ContractList
-                                contracts={contracts}
-                                loading={loading}
-                                onRefresh={fetchContracts}
+                            <Route
+                                path="/contracts"
+                                element={
+                                    <ContractList
+                                        contracts={contracts}
+                                        loading={loading}
+                                        onRefresh={fetchContracts}
+                                    />
+                                }
                             />
-                        }
-                    />
-                    <Route
-                        path="/contracts/:contractId/analysis"
-                        element={
-                            <ContractAnalysis
-                                onAnalysisComplete={handleContractAnalyzed}
+                            <Route
+                                path="/contracts/:contractId/analysis"
+                                element={
+                                    <ContractAnalysis
+                                        onAnalysisComplete={
+                                            handleContractAnalyzed
+                                        }
+                                    />
+                                }
                             />
-                        }
-                    />
-                </Routes>
+                            <Route path="/account" element={<Account />} />
+                            <Route path="/about" element={<About />} />
+                            <Route path="/contact" element={<Contact />} />
+                            <Route path="/privacy" element={<Privacy />} />
+                            <Route path="/terms" element={<Terms />} />
+                            <Route path="/legal" element={<Legal />} />
+                            <Route
+                                path="/auth/callback"
+                                element={
+                                    <div className="min-h-screen flex items-center justify-center">
+                                        <div className="text-center">
+                                            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+                                            <p className="mt-4 text-gray-600">
+                                                Completing authentication...
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            />
+                        </Routes>
+                    </div>
+                    <Footer />
+                </div>
             </main>
 
             <Toaster />
@@ -165,12 +257,18 @@ const AppContent = () => {
     );
 };
 
-// App wrapper with Router
+// App wrapper with Router and Auth Provider
 const App = () => {
     return (
-        <Router>
-            <AppContent />
-        </Router>
+        <AuthProvider>
+            <ToastProvider>
+                <Router>
+                    <ProtectedRoute>
+                        <AppContent />
+                    </ProtectedRoute>
+                </Router>
+            </ToastProvider>
+        </AuthProvider>
     );
 };
 

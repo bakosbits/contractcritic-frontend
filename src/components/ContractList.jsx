@@ -11,6 +11,7 @@ import {
     MoreHorizontal,
     Shield,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -52,13 +53,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/contexts/ToastContext";
+import LoadingSpinner from "@/components/ui/loading-spinner";
 import { API_BASE } from "@/lib/config";
 import AnalysisTypeDialog from "./AnalysisTypeDialog";
 
 const ContractList = ({ contracts, loading, onRefresh }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { getAccessToken } = useAuth();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("created_at");
@@ -67,31 +70,44 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
     const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
     const [selectedContract, setSelectedContract] = useState(null);
 
-    // Add a fallback mechanism to ensure contracts are loaded
-    useEffect(() => {
-        console.log("=== MOBILE DEBUG: ContractList mounted ===");
-        console.log("Contracts prop:", contracts);
-        console.log("Contracts length:", contracts.length);
-        console.log("Loading state:", loading);
+    // Add loading spinner for contract list
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <LoadingSpinner size="xl" text="Loading contracts..." />
+            </div>
+        );
+    }
 
-        // If contracts array is empty and not currently loading, trigger a refresh
-        if (contracts.length === 0 && !loading) {
-            console.log("No contracts found, triggering refresh...");
-            onRefresh();
+    const handleDownload = async (contractId) => {
+        try {
+            const token = await getAccessToken();
+            const response = await fetch(
+                `${API_BASE}/contracts/${contractId}/download`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to download contract");
+            }
+
+            // Create blob and download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `contract-${contractId}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            toast.error("Error", "Failed to download contract");
         }
-    }, []);
-
-    // Log whenever contracts or loading state changes
-    useEffect(() => {
-        console.log("=== MOBILE DEBUG: ContractList props changed ===");
-        console.log("Contracts:", contracts);
-        console.log("Contracts length:", contracts.length);
-        console.log("Loading:", loading);
-    }, [contracts, loading]);
-
-    const handleDownload = (contractId) => {
-        const downloadUrl = `${API_BASE}/contracts/${contractId}/download`;
-        window.open(downloadUrl, "_blank");
     };
 
     const handleAnalysisStarted = () => {
@@ -103,10 +119,14 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
         if (!selectedContract) return;
 
         try {
+            const token = await getAccessToken();
             const response = await fetch(
                 `${API_BASE}/contracts/${selectedContract.id}`,
                 {
                     method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
                 },
             );
 
@@ -114,17 +134,10 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
                 throw new Error("Failed to delete contract");
             }
 
-            toast({
-                title: "Success",
-                description: "Contract deleted successfully.",
-            });
+            toast.success("Success", "Contract deleted successfully.");
             onRefresh(); // Refresh the contract list
         } catch (error) {
-            toast({
-                title: "Error",
-                description: error.message,
-                variant: "destructive",
-            });
+            toast.error("Error", error.message);
         } finally {
             setDeleteDialogOpen(false);
             setSelectedContract(null);
@@ -190,28 +203,6 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
             }
         });
 
-    // Enhanced loading state with debug info
-    if (loading) {
-        console.log("ContractList rendering loading state");
-        return (
-            <div className="p-4 sm:p-6">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-                    <div className="space-y-4">
-                        {[...Array(5)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="h-16 bg-gray-200 rounded"
-                            ></div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    console.log("ContractList rendering with", contracts.length, "contracts");
-
     return (
         <div className="p-4 sm:p-6 space-y-6">
             {/* Header */}
@@ -226,19 +217,18 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                     <Button
-                        variant="outline"
                         onClick={onRefresh}
                         disabled={loading}
-                        className="w-full sm:w-auto"
+                        className="text-gray-900 bg-gray-200 hover:bg-gray-50 w-full sm:w-auto"
                     >
                         <RefreshCw
-                            className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                            className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`}
                         />
                         Refresh
                     </Button>
                     <Link to="/upload">
-                        <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                            <FileText className="w-4 h-4 mr-2" />
+                        <Button className="bg-gray-200 text-gray-900 hover:bg-gray-50 w-full sm:w-auto">
+                            <FileText className="w-4 h-4 mr-1" />
                             Upload Contract
                         </Button>
                     </Link>
@@ -507,7 +497,10 @@ const ContractList = ({ contracts, loading, onRefresh }) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>
+                        <AlertDialogAction
+                            className="bg-red-600 text-white hoover:bg-red-800"
+                            onClick={handleDelete}
+                        >
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

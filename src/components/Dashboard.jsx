@@ -9,6 +9,8 @@ import {
     Upload,
     Eye,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -19,11 +21,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import LoadingSpinner from "@/components/ui/loading-spinner";
 import { API_BASE } from "@/lib/config";
 
 const Dashboard = ({ contracts, loading, user }) => {
     const [dashboardStats, setDashboardStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
+    const { getAccessToken } = useAuth();
+    const { toast } = useToast();
 
     useEffect(() => {
         fetchDashboardStats();
@@ -32,15 +37,27 @@ const Dashboard = ({ contracts, loading, user }) => {
     const fetchDashboardStats = async () => {
         try {
             setStatsLoading(true);
-            const response = await fetch(
-                `${API_BASE}/dashboard/stats?user_id=${user.id}`,
-            );
+            const token = await getAccessToken();
+            const response = await fetch(`${API_BASE}/dashboard/stats`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
             if (response.ok) {
                 const data = await response.json();
                 setDashboardStats(data.data);
+            } else {
+                toast.warning(
+                    "Dashboard Stats",
+                    "Unable to load dashboard statistics. Using default values.",
+                );
             }
         } catch (error) {
             console.error("Error fetching dashboard stats:", error);
+            toast.error(
+                "Dashboard Error",
+                "Failed to load dashboard statistics. Please refresh the page.",
+            );
         } finally {
             setStatsLoading(false);
         }
@@ -70,18 +87,8 @@ const Dashboard = ({ contracts, loading, user }) => {
 
     if (loading || statsLoading) {
         return (
-            <div className="p-4 sm:p-6">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        {[...Array(4)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="h-32 bg-gray-200 rounded-lg"
-                            ></div>
-                        ))}
-                    </div>
-                </div>
+            <div className="min-h-screen flex items-center justify-center">
+                <LoadingSpinner size="xl" text="Loading dashboard..." />
             </div>
         );
     }
@@ -107,7 +114,7 @@ const Dashboard = ({ contracts, loading, user }) => {
                     </p>
                 </div>
                 <Link to="/upload">
-                    <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                    <Button className="bg-gray-200 text-gray-900 hover:bg-gray-50 w-full sm:w-auto">
                         <Upload className="w-4 h-4 mr-2" />
                         Upload Contract
                     </Button>
@@ -200,7 +207,9 @@ const Dashboard = ({ contracts, loading, user }) => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                                    <span className="text-sm">Highest Risk</span>
+                                    <span className="text-sm">
+                                        Highest Risk
+                                    </span>
                                 </div>
                                 <span className="text-sm font-medium">
                                     {stats.risk_distribution.high_risk}
@@ -220,7 +229,9 @@ const Dashboard = ({ contracts, loading, user }) => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                                    <span className="text-sm">Middle Of The Pack</span>
+                                    <span className="text-sm">
+                                        Middle Of The Pack
+                                    </span>
                                 </div>
                                 <span className="text-sm font-medium">
                                     {stats.risk_distribution.medium_risk}
@@ -273,7 +284,7 @@ const Dashboard = ({ contracts, loading, user }) => {
                                     No contracts uploaded yet
                                 </p>
                                 <Link to="/upload">
-                                    <Button variant="outline">
+                                    <Button className="bg-blue-600 hover:bg-blue-700">
                                         <Upload className="w-4 h-4 mr-2" />
                                         Upload Your First Contract
                                     </Button>
@@ -349,20 +360,14 @@ const Dashboard = ({ contracts, loading, user }) => {
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Link to="/upload">
-                            <Button
-                                variant="outline"
-                                className="w-full h-20 flex flex-col space-y-2"
-                            >
+                            <Button className="bg-blue-600 hover:bg-blue-700 w-full h-20 flex flex-col space-y-2">
                                 <Upload className="w-6 h-6" />
                                 <span>Upload Contract</span>
                             </Button>
                         </Link>
 
                         <Link to="/contracts">
-                            <Button
-                                variant="outline"
-                                className="w-full h-20 flex flex-col space-y-2"
-                            >
+                            <Button className="bg-blue-600 hover:bg-blue-700 w-full h-20 flex flex-col space-y-2">
                                 <FileText className="w-6 h-6" />
                                 <span>View All Contracts</span>
                             </Button>

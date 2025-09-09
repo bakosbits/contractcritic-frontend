@@ -1,8 +1,16 @@
 import React from "react";
 
 // Make sure getSeverityIcon is either imported or passed as a prop
-const ContractCautions = ({ factors, risk_level, category, title, getSeverityIcon, getRiskBgColor, getRiskColor }) => {
-    const filtered = factors.filter(factor => factor.category === category);
+const ContractCautions = ({
+    factors,
+    risk_level,
+    category,
+    title,
+    getSeverityIcon,
+    getRiskBgColor,
+    getRiskColor,
+}) => {
+    const filtered = factors.filter((factor) => factor.category === category);
 
     const getRecommendation = (category) => {
         const normalized = category?.toLowerCase().replace(/s$/, "");
@@ -14,7 +22,7 @@ const ContractCautions = ({ factors, risk_level, category, title, getSeverityIco
             case "missing protection":
                 return "If you can add these missing clauses, you'll be better protected";
             default:
-                return '';
+                return "";
         }
     };
 
@@ -22,19 +30,27 @@ const ContractCautions = ({ factors, risk_level, category, title, getSeverityIco
 
     return (
         <div>
-            {title && <h4 className="font-medium text-gray-900 mb-2">{title}</h4>}
+            {title && (
+                <h4 className="font-medium text-gray-900 mb-2">{title}</h4>
+            )}
             <ul className="space-y-2">
                 {filtered.map((factor, idx) => (
                     <li key={idx} className="flex items-start space-x-2">
                         {/* Icon next to description */}
-                        <span className="mt-0.5">{getSeverityIcon(factor.severity)}</span>
-                        <span className="text-sm text-gray-600">{factor.description}</span>
+                        <span className="mt-0.5">
+                            {getSeverityIcon(factor.severity)}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                            {factor.description}
+                        </span>
                     </li>
                 ))}
             </ul>
             {filtered[0].recommendation && (
                 <div className={`${getRiskBgColor(risk_level)} rounded-lg`}>
-                    <p className={`text-sm ${getRiskColor(risk_level)} p-2 mt-2`}>
+                    <p
+                        className={`text-sm ${getRiskColor(risk_level)} p-2 mt-2`}
+                    >
                         <strong>Recommendation:</strong>{" "}
                         {getRecommendation(filtered[0].category)}
                     </p>

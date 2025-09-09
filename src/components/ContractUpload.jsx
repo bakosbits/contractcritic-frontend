@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE } from "@/lib/config";
 import AnalysisTypeDialog from "./AnalysisTypeDialog";
 
@@ -32,6 +33,7 @@ const ContractUpload = ({ onContractUploaded }) => {
     const [analyzing, setAnalyzing] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { getAccessToken } = useAuth();
 
     const onDrop = useCallback(async (acceptedFiles, rejectedFiles) => {
         setError(null);
@@ -78,9 +80,16 @@ const ContractUpload = ({ onContractUploaded }) => {
         setError(null);
 
         try {
+            // Get authentication token
+            const token = await getAccessToken();
+            if (!token) {
+                throw new Error(
+                    "Authentication required. Please sign in again.",
+                );
+            }
+
             const formData = new FormData();
             formData.append("file", file);
-            formData.append("user_id", "1"); // In a real app, this would come from auth
 
             // Simulate upload progress
             const progressInterval = setInterval(() => {
@@ -95,6 +104,9 @@ const ContractUpload = ({ onContractUploaded }) => {
 
             const response = await fetch(`${API_BASE}/contracts/upload`, {
                 method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
                 body: formData,
             });
 
@@ -109,10 +121,10 @@ const ContractUpload = ({ onContractUploaded }) => {
             const data = await response.json();
             setUploadedFile(data.data);
 
-            toast({
-                title: "Upload Successful",
-                description: `${file.name} has been uploaded successfully.`,
-            });
+            toast.success(
+                "Upload Successful",
+                `${file.name} has been uploaded successfully.`,
+            );
 
             if (onContractUploaded) {
                 onContractUploaded(data.data);
@@ -122,13 +134,10 @@ const ContractUpload = ({ onContractUploaded }) => {
             setError(error.message || "Upload failed. Please try again.");
             setUploadProgress(0);
 
-            toast({
-                title: "Upload Failed",
-                description:
-                    error.message ||
-                    "Failed to upload contract. Please try again.",
-                variant: "destructive",
-            });
+            toast.error(
+                "Upload Failed",
+                error.message || "Failed to upload contract. Please try again.",
+            );
         } finally {
             setUploading(false);
         }
@@ -228,7 +237,7 @@ const ContractUpload = ({ onContractUploaded }) => {
                                             </div>
 
                                             <Button
-                                                variant="outline"
+                                                className="bg-blue-600 hover:bg-blue-700"
                                                 disabled={uploading}
                                             >
                                                 <Upload className="w-4 h-4 mr-2" />
@@ -267,7 +276,7 @@ const ContractUpload = ({ onContractUploaded }) => {
                                 <div className="flex space-x-3">
                                     <Button
                                         onClick={handleAnalyze}
-                                        className="flex-1"
+                                        className="flex-1 bg-gray-700 text-white hover:bg-gray-800 hover:text-white"
                                         disabled={analyzing}
                                     >
                                         {analyzing
@@ -275,7 +284,7 @@ const ContractUpload = ({ onContractUploaded }) => {
                                             : "Analyze Contract"}
                                     </Button>
                                     <Button
-                                        variant="outline"
+                                        className="bg-blue-600 hover:bg-blue-700"
                                         onClick={resetUpload}
                                     >
                                         Upload Another
@@ -369,8 +378,8 @@ const ContractUpload = ({ onContractUploaded }) => {
                                         Plain English Summary
                                     </h4>
                                     <p className="text-sm text-gray-600">
-                                        Receive easy-to-understand explanations
-                                        and action items.
+                                        Receive explanations and action items
+                                        that are easy-to-understand.
                                     </p>
                                 </div>
                             </div>
